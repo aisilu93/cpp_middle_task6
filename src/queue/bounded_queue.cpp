@@ -11,7 +11,8 @@ BoundedQueue::BoundedQueue(int capacity) {
     if (capacity <= 0)
         throw std::invalid_argument("invalid capacity");
 
-    this->capacity = capacity;
+    options.capacity = capacity;
+    options.bounded = true;
 }
 
 BoundedQueue::~BoundedQueue() {
@@ -22,8 +23,8 @@ BoundedQueue::~BoundedQueue() {
 
 void BoundedQueue::push(std::function<void()> task) {
     std::unique_lock<std::mutex> cv_lock(mutex_);
-    cv_ready_to_push.wait(cv_lock,
-                          [this]() { return tasks.size() < capacity || need_stop.load(std::memory_order_acquire); });
+    cv_ready_to_push.wait(
+        cv_lock, [this]() { return tasks.size() < options.capacity || need_stop.load(std::memory_order_acquire); });
 
     if (need_stop.load(std::memory_order_acquire))
         return;

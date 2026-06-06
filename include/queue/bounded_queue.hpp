@@ -8,8 +8,8 @@
 namespace dispatcher::queue {
 
 class BoundedQueue : public IQueue {
+    QueueOptions options;
     std::mutex mutex_;
-    int capacity = 0;
     std::queue<std::function<void()>> tasks;
 
     std::condition_variable cv_has_tasks;
