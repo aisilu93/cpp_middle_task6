@@ -12,7 +12,6 @@ class BoundedQueue : public IQueue {
     std::mutex mutex_;
     std::queue<std::function<void()>> tasks;
 
-    std::condition_variable cv_has_tasks;
     std::condition_variable cv_ready_to_push;
     std::atomic<bool> need_stop = false;
 
@@ -22,6 +21,8 @@ public:
     void push(std::function<void()> task) override;
 
     std::optional<std::function<void()>> try_pop() override;
+
+    void shutdown();
 
     ~BoundedQueue() override;
 };

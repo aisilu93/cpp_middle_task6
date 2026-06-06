@@ -35,29 +35,12 @@ TEST(UnboundedCheck, SimplePushAndPop) {
     }
 }
 
-TEST(UnboundedCheck, PopFromEmptyWaits) {
-    v2.clear();
-    UnboundedQueue queue;
-
-    std::atomic<bool> wait_start(false);
-    std::atomic<bool> wait_end(false);
+TEST(UnboundedCheck, PopFromEmptyReturnsNullopt) {
+    UnboundedQueue queue(3);
 
     std::optional<std::function<void()>> out;
-    std::jthread try_pop_thread([&]() {
-        wait_start.store(true, std::memory_order_release);
-        out = queue.try_pop();
-        wait_end.store(true, std::memory_order_release);
-    });
-
-    sleep(1);
-    EXPECT_EQ(wait_start.load(std::memory_order_acquire), true);
-    EXPECT_EQ(wait_end.load(std::memory_order_acquire), false);
-    EXPECT_FALSE(out.has_value());
-
-    if (try_pop_thread.joinable()) {
-        queue.push([]() {});
-        try_pop_thread.join();
-    }
+    out = queue.try_pop();
+    EXPECT_EQ(out, std::nullopt);
 }
 
 TEST(UnboundedCheck, PushToFullBoundedWaits) {
@@ -94,4 +77,31 @@ TEST(UnboundedCheck, PushToFullBoundedWaits) {
     EXPECT_EQ(v2[0], 2);
     if (try_push_thread.joinable())
         try_push_thread.join();
+}
+
+TEST(UnboundedCheck, StopPushByStopflag) {
+    std::atomic<bool> wait_start(false);
+    std::atomic<bool> wait_end(false);
+    std::jthread push_thread;
+    {
+        UnboundedQueue queue(1);
+        auto in1 = [&]() {};
+        auto in2 = [&]() {};
+        queue.push(in1);
+
+        std::optional<std::function<void()>> out;
+        std::jthread tmp([&]() {
+            wait_start.store(true, std::memory_order_release);
+            queue.push(in2);
+            wait_end.store(true, std::memory_order_release);
+        });
+        push_thread.swap(tmp);
+        sleep(1);
+    }
+
+    EXPECT_EQ(wait_start.load(std::memory_order_acquire), true);
+    EXPECT_EQ(wait_end.load(std::memory_order_acquire), true);
+    if (push_thread.joinable()) {
+        push_thread.join();
+    }
 }

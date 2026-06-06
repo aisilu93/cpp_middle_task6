@@ -63,8 +63,10 @@ TEST(BasicCheck, PushToFull) {
 
     for (int i = 0; i < 4; i++) {
         auto out = queue.try_pop();
-        if (i != 3)
+        if (i != 3) {
+            sleep(1);
             continue;
+        }
 
         EXPECT_TRUE(out.has_value());
         std::invoke(out.value());
@@ -79,29 +81,12 @@ TEST(BasicCheck, PushToFull) {
         try_push_thread.join();
 }
 
-TEST(BasicCheck, PopFromEmptyWaits) {
-    v.clear();
+TEST(BasicCheck, PopFromEmptyReturnsNullopt) {
     BoundedQueue queue(3);
 
-    std::atomic<bool> wait_start(false);
-    std::atomic<bool> wait_end(false);
-
     std::optional<std::function<void()>> out;
-    std::jthread try_pop_thread([&]() {
-        wait_start.store(true, std::memory_order_release);
-        out = queue.try_pop();
-        wait_end.store(true, std::memory_order_release);
-    });
-
-    sleep(1);
-    EXPECT_EQ(wait_start.load(std::memory_order_acquire), true);
-    EXPECT_EQ(wait_end.load(std::memory_order_acquire), false);
-    EXPECT_FALSE(out.has_value());
-
-    if (try_pop_thread.joinable()) {
-        queue.push([]() {});
-        try_pop_thread.join();
-    }
+    out = queue.try_pop();
+    EXPECT_EQ(out, std::nullopt);
 }
 
 TEST(BasicCheck, StopPushByStopflag) {
