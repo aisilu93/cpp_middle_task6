@@ -79,12 +79,19 @@ TEST(PriorityCheck, PopFromEmptyWaitsPush) {
         t.join();
 }
 
-TEST(PriorityCheck, Shutdown_PopReturnsNullopt) {
+TEST(PriorityCheck, Shutdown_PopReturnsOnlyHigh) {
     PriorityQueue q(priorities);
-    q.push(TP::Normal, [&]() {});
+    bool high_invoked = false;
+    bool normal_invoked = false;
+    q.push(TP::Normal, [&]() { normal_invoked = true; });
+    q.push(TP::High, [&]() { high_invoked = true; });
     q.shutdown();
     auto out = q.pop();
-    EXPECT_EQ(out, std::nullopt);
+    EXPECT_TRUE(out.has_value());
+    std::invoke(out.value());
+    EXPECT_TRUE(high_invoked && !normal_invoked);
+    out = q.pop();
+    EXPECT_FALSE(out.has_value());
 }
 
 TEST(PriorityCheck, ShutdownStopsPush) {

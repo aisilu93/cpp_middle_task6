@@ -30,7 +30,7 @@ void PriorityQueue::push(TaskPriority priority, std::function<void()> task) {
 std::optional<std::function<void()>> PriorityQueue::pop() {
     std::optional<std::function<void()>> task = std::nullopt;
 
-    while (!need_stop.load(std::memory_order_acquire)) {
+    while (true) {
         if (tasks_counter.load(std::memory_order_acquire) > 0) {
             // обойдем все очереди в порядке убывания приоритета в поисках таски
             for (auto i = std::to_underlying(TaskPriority::High); i <= std::to_underlying(TaskPriority::Normal); i++) {
@@ -38,6 +38,10 @@ std::optional<std::function<void()>> PriorityQueue::pop() {
                 if (task) {
                     tasks_counter.fetch_sub(1, std::memory_order_release);
                     return task;
+                } else if (i == std::to_underlying(TaskPriority::High)) {
+                    // если в приоритетной очереди нет задач, проверим, не завершают ли обработку задач
+                    if (need_stop.load(std::memory_order_acquire))
+                        return task;
                 }
             }
         }

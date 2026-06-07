@@ -32,7 +32,7 @@ void BoundedQueue::push(std::function<void()> task) {
 }
 
 std::optional<std::function<void()>> BoundedQueue::try_pop() {
-    if (need_stop.load(std::memory_order_acquire) || tasks.empty())
+    if (tasks.empty())
         return std::nullopt;
 
     auto task = std::move(tasks.front());
