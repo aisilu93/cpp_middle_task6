@@ -1,7 +1,18 @@
 #include "task_dispatcher.hpp"
+#include "queue/priority_queue.hpp"
+#include <memory>
 
 namespace dispatcher {
 
-// здесь ваш код
+TaskDispatcher::TaskDispatcher(size_t thread_count, std::vector<std::pair<TaskPriority, queue::QueueOptions>> &options)
+    : queue(std::make_shared<queue::PriorityQueue>(options)), pool(queue, thread_count) {
+    pool.start();
+}
 
-} // namespace dispatcher
+TaskDispatcher::~TaskDispatcher() { pool.stop(); }
+
+void TaskDispatcher::schedule(TaskPriority priority, std::function<void()> task) {
+    queue->push(priority, std::move(task));
+}
+
+}  // namespace dispatcher

@@ -85,7 +85,7 @@ TEST(PriorityCheck, Shutdown_PopReturnsOnlyHigh) {
     bool normal_invoked = false;
     q.push(TP::Normal, [&]() { normal_invoked = true; });
     q.push(TP::High, [&]() { high_invoked = true; });
-    q.shutdown();
+    std::jthread t([&]() { q.shutdown(); });
     auto out = q.pop();
     EXPECT_TRUE(out.has_value());
     std::invoke(out.value());
@@ -97,27 +97,31 @@ TEST(PriorityCheck, Shutdown_PopReturnsOnlyHigh) {
 TEST(PriorityCheck, ShutdownStopsPush) {
     PriorityQueue q(priorities);
 
-    std::atomic<bool> wait_start(false);
-    std::atomic<bool> wait_end(false);
+    std::atomic<bool> push_start(false);
+    std::atomic<bool> push_end(false);
     std::optional<std::function<void()>> out;
 
     std::jthread t([&]() {
-        wait_start.store(true, std::memory_order_release);
-        for (int i = 0; i < opt1.capacity.value() + 1; i++)
+        push_start.store(true, std::memory_order_release);
+        for (int i = 0; i != opt1.capacity.value() + 1; i++) {
             q.push(TP::High, [&]() {});
-        wait_end.store(true, std::memory_order_release);
+        }
+        push_end.store(true, std::memory_order_release);
     });
 
     sleep(1);
-    EXPECT_EQ(wait_start.load(std::memory_order_acquire), true);
-    EXPECT_EQ(wait_end.load(std::memory_order_acquire), false);
+    EXPECT_EQ(push_start.load(std::memory_order_acquire), true);
+    EXPECT_EQ(push_end.load(std::memory_order_acquire), false);
 
-    q.shutdown();
+    std::jthread t1([&]() { q.shutdown(); });
 
     sleep(1);
-    EXPECT_EQ(wait_start.load(std::memory_order_acquire), true);
-    EXPECT_EQ(wait_end.load(std::memory_order_acquire), true);
 
     if (t.joinable())
         t.join();
+    if (t1.joinable())
+        t1.join();
+
+    EXPECT_EQ(push_start.load(std::memory_order_acquire), true);
+    EXPECT_EQ(push_end.load(std::memory_order_acquire), true);
 }

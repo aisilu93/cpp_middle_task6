@@ -16,11 +16,10 @@
 namespace dispatcher::queue {
 
 class PriorityQueue {
-    std::unordered_map<TaskPriority, UnboundedQueue> queue;
+    std::unordered_map<int, UnboundedQueue> queue;
 
     std::mutex mutex_;
     std::condition_variable cv_has_tasks;
-    std::atomic<size_t> tasks_counter = 0;
     std::atomic<bool> need_stop = false;
 
 public:

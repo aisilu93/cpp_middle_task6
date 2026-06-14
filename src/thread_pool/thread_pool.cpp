@@ -1,4 +1,6 @@
 #include "thread_pool/thread_pool.hpp"
+#include <exception>
+#include <print>
 
 namespace dispatcher::thread_pool {
 
@@ -11,14 +13,11 @@ ThreadPool::ThreadPool(std::shared_ptr<dispatcher::queue::PriorityQueue> queue, 
     pool.reserve(pool_size);
 }
 
-ThreadPool::~ThreadPool() { stop(); }
+ThreadPool::~ThreadPool() {}
 
 void ThreadPool::start() {
     for (int i = 0; i < pool_size; i++) {
-        pool.emplace_back([this] {
-            while (worker()) {
-            }
-        });
+        pool.emplace_back([this] { worker(); });
     }
 }
 
@@ -30,16 +29,19 @@ void ThreadPool::stop() {
     }
 }
 
-bool ThreadPool::worker() {
-    auto task = queue->pop();
-    if (task) {
+void ThreadPool::worker() {
+    while (true) {
+        auto task = queue->pop();
+
+        if (!task)
+            break;
+
         try {
-            std::invoke(task.value());
-        } catch (const std::exception &e) {
+            std::invoke(*task);
+        } catch (std::exception &e) {
+            std::print("exception {}", e.what());
         }
-        return true;
     }
-    return false;
 }
 
 }  // namespace dispatcher::thread_pool

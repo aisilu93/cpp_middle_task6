@@ -9,14 +9,13 @@ class ThreadPool {
     std::vector<std::jthread> pool;
     std::shared_ptr<dispatcher::queue::PriorityQueue> queue;
 
-    void start();
-    void stop();
+    void worker();
 
 public:
     explicit ThreadPool(std::shared_ptr<dispatcher::queue::PriorityQueue> queue, int pool_size);
     ~ThreadPool();
-
-    bool worker();
+    void start();
+    void stop();
 };
 
 }  // namespace dispatcher::thread_pool

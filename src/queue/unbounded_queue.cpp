@@ -25,19 +25,21 @@ UnboundedQueue::~UnboundedQueue() {
 }
 
 void UnboundedQueue::push(std::function<void()> task) {
+    if (need_stop.load(std::memory_order_acquire))
+        return;
+
     if (options.bounded) {
         std::unique_lock<std::mutex> cv_lock(mutex_);
         cv_ready_to_push.wait(
             cv_lock, [this]() { return tasks.size() < options.capacity || need_stop.load(std::memory_order_acquire); });
     }
 
-    if (need_stop.load(std::memory_order_acquire))
-        return;
-
+    std::lock_guard<std::mutex> lock(mutex_);
     tasks.emplace(std::move(task));
 }
 
 std::optional<std::function<void()>> UnboundedQueue::try_pop() {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (tasks.empty())
         return std::nullopt;
 
