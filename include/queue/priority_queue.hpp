@@ -1,5 +1,6 @@
 #pragma once
 #include "queue/bounded_queue.hpp"
+#include "queue/queue.hpp"
 #include "queue/unbounded_queue.hpp"
 #include "types.hpp"
 
@@ -15,9 +16,14 @@
 namespace dispatcher::queue {
 
 class PriorityQueue {
-    // здесь ваш код
+    std::unordered_map<int, UnboundedQueue> queue;
+
+    std::mutex mutex_;
+    std::condition_variable cv_has_tasks;
+    std::atomic<bool> need_stop = false;
+
 public:
-    // explicit PriorityQueue(?);
+    explicit PriorityQueue(std::vector<std::pair<TaskPriority, QueueOptions>> &options);
 
     void push(TaskPriority priority, std::function<void()> task);
     // block on pop until shutdown is called
