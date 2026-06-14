@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "queue/priority_queue.hpp"
 #include "queue/queue.hpp"
@@ -14,6 +15,7 @@ class TaskDispatcher {
     thread_pool::ThreadPool pool;
 
 public:
+    TaskDispatcher(size_t thread_count);
     TaskDispatcher(size_t thread_count, std::vector<std::pair<TaskPriority, queue::QueueOptions>> &options);
 
     void schedule(TaskPriority priority, std::function<void()> task);
